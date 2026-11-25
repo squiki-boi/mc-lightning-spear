@@ -122,4 +122,18 @@ public class LightningSpearEntity extends ThrowableItemProjectile {
 		ServerPlayer owner = this.ownerPlayer();
 		if (owner != null) {
 			if (owner.getInventory().add(stack)) {
-				level.playSound(null, owner.getX(),
+				level.playSound(null, owner.getX(), owner.getY(), owner.getZ(),
+						SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 0.5F, 1.5F);
+				return;
+			}
+			ItemEntity drop = new ItemEntity(level, owner.getX(), owner.getY(), owner.getZ(), stack);
+			drop.setDefaultPickUpDelay();
+			level.addFreshEntity(drop);
+			return;
+		}
+
+		ItemEntity drop = new ItemEntity(level, this.getX(), this.getY(), this.getZ(), stack);
+		drop.setDefaultPickUpDelay();
+		level.addFreshEntity(drop);
+	}
+}
