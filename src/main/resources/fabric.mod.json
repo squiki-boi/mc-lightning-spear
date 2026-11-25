@@ -1,0 +1,20 @@
+{
+	"schemaVersion": 1,
+	"id": "lightning_spear",
+	"version": "${version}",
+	"name": "Lightning Spear",
+	"description": "A spear you throw like a trident. It brings the thunder.",
+	"authors": [],
+	"license": "MIT",
+	"environment": "*",
+	"entrypoints": {
+		"main": [ "com.example.lightningspear.LightningSpearMod" ],
+		"client": [ "com.example.lightningspear.client.LightningSpearClient" ]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}
