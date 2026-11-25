@@ -19,15 +19,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
-/**
- * The thrown spear. Flies like a trident, and on any impact calls down a bolt,
- * then returns to its owner's inventory (like Loyalty) - or drops as an
- * invulnerable item if the owner is gone / the inventory is full.
- */
 public class LightningSpearEntity extends ThrowableItemProjectile {
-	/** If the thrower is closer than this to the impact, the bolt is visual-only. */
 	private static final double SAFE_RADIUS = 4.0D;
-	private static final float BOLT_DAMAGE = 12.0F;
 	private static final int MAX_FLIGHT_TICKS = 300;
 
 	private boolean returnToOwner = true;
@@ -90,20 +83,30 @@ public class LightningSpearEntity extends ThrowableItemProjectile {
 		this.discard();
 	}
 
+	private ServerPlayer ownerPlayer() {
+		Entity owner = this.getOwner();
+		if (owner instanceof ServerPlayer player && player.isAlive()) {
+			return player;
+		}
+		return null;
+	}
+
 	private void strike(ServerLevel level, Vec3 at) {
-		LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(level, EntitySpawnReason.TRIGGERED);
-		if (bolt == null) {
+		// Looked up by name so it survives field renames between versions.
+		Entity created = EntityType.byString("lightning_bolt")
+				.map(type -> (Entity) type.create(level, EntitySpawnReason.TRIGGERED))
+				.orElse(null);
+		if (!(created instanceof LightningBolt bolt)) {
 			return;
 		}
 
 		bolt.setPos(at.x, at.y, at.z);
 
-		Entity owner = this.getOwner();
+		ServerPlayer owner = this.ownerPlayer();
 		boolean ownerTooClose = owner != null && owner.position().distanceToSqr(at) < SAFE_RADIUS * SAFE_RADIUS;
-		if (ownerTooClose) {
+		boolean dropsAtImpact = this.returnToOwner && owner == null;
+		if (ownerTooClose || dropsAtImpact) {
 			bolt.setVisualOnly(true);
-		} else {
-			bolt.setDamage(BOLT_DAMAGE);
 		}
 		level.addFreshEntity(bolt);
 
@@ -116,19 +119,7 @@ public class LightningSpearEntity extends ThrowableItemProjectile {
 			return;
 		}
 
-		Entity owner = this.getOwner();
-		if (owner instanceof ServerPlayer player && player.isAlive()) {
-			if (player.getInventory().add(stack)) {
-				level.playSound(null, player.getX(), player.getY(), player.getZ(),
-						SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 0.5F, 1.5F);
-				return;
-			}
-		}
-
-		// Fallback: drop it, and make it survive its own lightning.
-		ItemEntity drop = new ItemEntity(level, this.getX(), this.getY(), this.getZ(), stack);
-		drop.setInvulnerable(true);
-		drop.setDefaultPickUpDelay();
-		level.addFreshEntity(drop);
-	}
-}
+		ServerPlayer owner = this.ownerPlayer();
+		if (owner != null) {
+			if (owner.getInventory().add(stack)) {
+				level.playSound(null, owner.getX(),
